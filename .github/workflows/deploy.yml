@@ -1,0 +1,36 @@
+name: deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cat >> ~/.ssh/config <<EOF
+          Host ${{ secrets.DEPLOY_HOST }}
+            User ubuntu
+            IdentityFile ~/.ssh/deploy_key
+          EOF
+          ssh-keyscan ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create Docker context
+        run: |
+          docker context create remote \
+            --docker "host=ssh://ubuntu@${{ secrets.DEPLOY_HOST }}"
+
+      - name: Deploy
+        env:
+          VERSION: ${{ github.sha }}
+        run: |
+          docker --context remote compose up -d
+
+      - name: Verify deployment
+        run: |
+          docker --context remote compose ps
