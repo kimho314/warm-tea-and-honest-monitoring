@@ -4,7 +4,13 @@ services:
     container_name: prometheus
     ports:
       - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
     restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
 
   grafana:
     build: grafana
@@ -12,3 +18,6 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+
+volumes:
+  prometheus_data:
